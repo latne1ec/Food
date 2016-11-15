@@ -1,0 +1,195 @@
+//-(void) queryGooglePlaces: (NSString *) googleType {
+//
+//    //NSString *url = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/search/json?location=%f,%f&radius=%@&types=%@&sensor=true&key=%@", self.currentLocation.latitude, self.currentLocation.longitude, [NSString stringWithFormat:@"%i", 10000], googleType, kGOOGLE_API_KEY];
+//
+//   // NSString *url = @"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-33.8670522,151.1957362&radius=500&type=restaurant&name=cruise&key=YOUR_API_KEY";
+//
+//    NSString *url = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=1610&type=restaurant&key=%@",self.currentLocation.latitude, self.currentLocation.longitude, kGOOGLE_API_KEY];
+//
+//
+//    NSURL *googleRequestURL=[NSURL URLWithString:url];
+//
+//    dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//
+//        NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+//        [self performSelectorOnMainThread:@selector(fetchedData:) withObject:data waitUntilDone:YES];
+//    });
+//}
+//
+//-(void)fetchedData:(NSData *)responseData {
+//
+//    NSError* error;
+//    NSDictionary* json = [NSJSONSerialization
+//                          JSONObjectWithData:responseData
+//
+//                          options:kNilOptions
+//                          error:&error];
+//
+//    NSArray* places = [json objectForKey:@"results"];
+//
+//    NSObject *object = [[NSObject alloc] init];
+//    object = [places objectAtIndex:0];
+//   // NSLog(@"First Place: %@", object);
+//
+//
+//    for (int i = 0; i < places.count; i++) {
+//        NSString *name = [places objectAtIndex:i];
+//        NSLog(@"Place %d: %@", i, name);
+//    }
+//
+//}
+
+
+
+
+//    NSMutableArray *imageViews = [[NSMutableArray alloc] init];
+//    for(NSInteger i=0; i < self.venueImagesArray.count; i++) {
+//
+//        if (i == 0) {
+//
+//        } else {
+//
+//        UIImageView *currentImageView = [[UIImageView alloc] initWithFrame:CGRectMake(_w*i, 0, _w, _h)];
+//        currentImageView.tag = 101;
+//        currentImageView.contentMode = UIViewContentModeScaleAspectFill;
+//        currentImageView.clipsToBounds = true;
+//        NSString *urlString = [self.venueImagesArray objectAtIndex:i];
+//        NSURL *url = [NSURL URLWithString:urlString];
+//        [currentImageView sd_setImageWithURL:url placeholderImage:[UIImage imageNamed:@""]];
+//        [imageViews addObject:currentImageView];
+//        }
+//    }
+//
+//    for (int i = 0; i < imageViews.count; i++) {
+//        [cell.scrollView addSubview:[imageViews objectAtIndex:i]];
+//    }
+
+//[cell.scrollView bringSubviewToFront:cell.pageControl];
+
+
+
+-(void)queryForGooglePlaceVenues {
+
+NSString *googleUrl = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=10000&type=restaurant&key=%@",self.currentLocation.latitude, self.currentLocation.longitude, kGOOGLE_API_KEY];
+
+NSURL *googleRequestURL=[NSURL URLWithString:googleUrl];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedPlaces:) withObject:data waitUntilDone:YES];
+});
+}
+
+-(void)fetchedPlaces: (NSData *)responseData {
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+NSLog(@"Json: %@", json);
+
+}
+
+
+
+
+-(void)fetchedData:(NSData *)responseData {
+
+NSString *clientID = kCLIENTID;
+NSString *clientSecret = kCLIENTSECRET;
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+NSArray *places = [[json objectForKey:@"response"] objectForKey:@"venues"];
+
+NSObject *object = [[NSObject alloc] init];
+object = [places objectAtIndex:0];
+
+NSLog(@"HERE: %lu", (unsigned long)places.count);
+
+self.venues = [[json objectForKey:@"response"] objectForKey:@"venues"];
+
+int i = arc4random_uniform(self.venues.count-1.0f);
+
+NSDictionary *dic = [self.venues objectAtIndex:i];
+//NSLog(@"Dic: %@", dic);
+
+self.venueName.text = [dic valueForKey:@"name"];
+self.venueTeaser.text = @"Some corny teaser";
+self.venueDescription.text = @"Lorem Ipsum is simply dummy text of the printing industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s.";
+
+NSDictionary *tempVen = [self.venues objectAtIndex:i];
+//NSLog(@"Hi: %@", [tempVen valueForKey:@"id"]);
+
+NSString *url = [NSString stringWithFormat:@"https://api.foursquare.com/v2/venues/%@/photos?client_id=%@&client_secret=%@&v=20130815&group=venue",[tempVen valueForKey:@"id"], clientID, clientSecret];
+
+NSURL *googleRequestURL=[NSURL URLWithString:url];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedImage:) withObject:data waitUntilDone:YES];
+});
+}
+
+-(void)fetchedImage: (NSData *)responseData {
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+NSMutableArray *array = [[NSMutableArray alloc] init];
+array = [[[json objectForKey:@"response"] objectForKey:@"photos"] valueForKey:@"items"];
+
+if (array.count>0) {
+NSString *prefix = [[array valueForKey:@"prefix"] objectAtIndex:0];
+NSString *suffix = [[array valueForKey:@"suffix"] objectAtIndex:0];
+NSString *imageUrl = [NSString stringWithFormat:@"%@600x600%@", prefix, suffix];
+NSLog(@"Pic: %@", imageUrl);
+NSURL *url = [NSURL URLWithString:imageUrl];
+self.venueImage.image = [UIImage imageWithData:[NSData dataWithContentsOfURL:url]];
+
+} else {
+return;
+}
+}
+
+
+-(void)queryForGooglePlaceVenues {
+
+NSString *googleUrl = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=10000&type=restaurant&key=%@",self.currentLocation.latitude, self.currentLocation.longitude, kGOOGLE_API_KEY];
+
+NSURL *googleRequestURL=[NSURL URLWithString:googleUrl];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedPlaces:) withObject:data waitUntilDone:YES];
+});
+}
+
+-(void)fetchedPlaces: (NSData *)responseData {
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+//    NSArray *array = [json valueForKey:@"results"];
+//    NSLog(@"Places: %@", json);
+
+}

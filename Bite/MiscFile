@@ -1,0 +1,25 @@
+if(!self.isReverse){
+////////FIRST VIEW
+[UIView transitionWithView:animatedViewForTransition
+duration:[self transitionDuration:transitionContext] * 0.98
+options:0
+animations:^{
+animatedViewForTransition.transform = finalTransform;
+//animatedViewForTransition.center = transitionContext.containerView.center;
+animatedViewForTransition.backgroundColor = presentedController.view.backgroundColor;
+presentedController.view.layer.opacity = 1;
+} completion:^(BOOL finished) {
+//presentedController.view.layer.opacity = 1;
+[animatedViewForTransition removeFromSuperview];
+[transitionContext completeTransition:![transitionContext transitionWasCancelled]];
+}];
+
+//        [UIView animateWithDuration:[self transitionDuration:transitionContext] * 0.92
+//                              delay:[self transitionDuration:transitionContext] * 0
+//                            options:0
+//                         animations:^{
+//                             presentedController.view.layer.opacity = 1;
+//                         } completion:^(BOOL finished) {
+//                             [animatedViewForTransition removeFromSuperview];
+//                             [transitionContext completeTransition:![transitionContext transitionWasCancelled]];
+//                         }];

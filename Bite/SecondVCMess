@@ -1,0 +1,796 @@
+//
+//  SecondViewController.m
+//  Example
+//
+//  Created by Jonathan Tribouharet
+//
+
+#import "SecondViewController.h"
+#import "SDWebImageManager.h"
+#import "UIImageView+WebCache.h"
+#import "YPAPISample.h"
+
+
+#define UIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
+
+#define kCLIENTID @"VPHBFYCGLAKRNZTCX2E2SUXQXQLZFVZ4JLWCRN5TCLFLW2CI"
+#define kCLIENTSECRET @"MAJMGKNWIUNYHIBUGHSS2GSMMTV0M2T5T3LCTBYI0ZGOF22D"
+#define kGOOGLE_API_KEY @"AIzaSyCJtSY62kZVP8VqRVPO0JbmwkeR7-IzM2I"
+
+@interface SecondViewController ()
+
+@property (nonatomic, strong) NSArray *venues;
+@property int previousDeployedCellIndex;
+@property int deployedCellIndex;
+@property(nonatomic) float w, h;
+
+@end
+
+@implementation SecondViewController
+
+- (UIStatusBarStyle)preferredStatusBarStyle {
+return UIStatusBarStyleLightContent;
+}
+
+- (void)viewDidLoad
+{
+[super viewDidLoad];
+
+_deployedCellIndex = -1234;
+//_selectedIndex = 1241;
+_previousDeployedCellIndex = -12212;
+
+
+[[self navigationController] setNavigationBarHidden:NO animated:YES];
+
+self.topView =[[UIView alloc] initWithFrame:CGRectMake(0, 0,[UIScreen mainScreen].bounds.size.width, 72)];
+self.topView.backgroundColor= [self colorWithHexString:self.dasString];
+self.topView.layer.shadowOpacity = 0.0;
+[UIView animateWithDuration:0.9 animations:^{
+self.topView.layer.shadowColor = [UIColor blackColor].CGColor;
+self.topView.layer.shadowOpacity = 0.34;
+self.topView.layer.shadowRadius = 0.15;
+self.topView.layer.shadowOffset = CGSizeMake(0.0f, 0.54f);
+
+self.categoryLabel.layer.shadowColor = [UIColor blackColor].CGColor;
+self.categoryLabel.layer.shadowOpacity = 0.2;
+self.categoryLabel.layer.shadowRadius = 0.15;
+self.categoryLabel.layer.shadowOffset = CGSizeMake(0.00f, 0.44f);
+
+} completion:^(BOOL finished) {
+
+}];
+
+//[self.tableview setContentOffset:<#(CGPoint)#> animated:<#(BOOL)#>
+
+//self.view.backgroundColor = [self colorWithHexString:self.dasString];
+
+self.categoryLabel.text = self.category;
+
+//[self.categoryLabel setCenter:CGPointMake(topView.frame.size.width / 2, topView.frame.size.height / 2)];
+[self.categoryLabel layoutIfNeeded];
+
+self.longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPressBegan:)];
+self.longPress.delegate = (id)self;
+self.longPress.minimumPressDuration = 0.01;
+
+UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(scrollToTop)];
+tap.numberOfTapsRequired = 1;
+
+[self.topView addGestureRecognizer:tap];
+
+self.categoryIcon.image = self.icon;
+
+//self.tableview.layer.cornerRadius = 10;
+self.tableview.clipsToBounds = YES;
+
+
+[self.view addSubview:self.topView];
+[self.view addSubview:self.categoryLabel];
+[self.view addSubview:self.categoryIcon];
+
+
+self.tableview.delegate = self;
+self.tableview.dataSource = self;
+self.tableview.tableFooterView = [UIView new];
+
+
+self.tableview.emptyDataSetSource = self;
+self.tableview.emptyDataSetDelegate = self;
+
+
+[self setNeedsStatusBarAppearanceUpdate];
+[self.view setBackgroundColor: [self colorWithHexString:self.dasString]];
+
+self.tableview.backgroundColor = [UIColor whiteColor];
+
+[self createCloseButton];
+
+UISwipeGestureRecognizer *swipe = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(didCloseButtonTouch)];
+swipe.direction = UISwipeGestureRecognizerDirectionDown;
+
+[self.view addGestureRecognizer:swipe];
+//[self queryForVenues:self.category];
+
+NSLog(@"ASDAS %f",self.view.frame.size.height);
+
+//[self queryForVenues:self.category];
+
+//[self queryForDasVenues];
+[self queryUsingYelpYuck];
+//[self queryForGooglePlaceVenues];
+
+}
+
+-(void)scrollToTop {
+
+[self.tableview scrollRectToVisible:CGRectMake(0, 0, 1, 1) animated:YES];
+
+}
+
+
+-(void)viewWillAppear:(BOOL)animated {
+
+//[self performSelector:@selector(this) withObject:nil afterDelay:.2];
+
+[[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleLightContent];
+
+self.tableview.alpha = 0.0f;
+[UIView animateWithDuration:0.11 delay:0.25 options:0 animations:^{
+
+NSLog(@"Started");
+self.tableview.alpha = 1.0;
+} completion:^(BOOL finished) {
+
+}];
+}
+
+-(void)this {
+
+self.tableview.frame = CGRectMake(0, self.view.frame.size.height, self.view.frame.size.width, self.view.frame.size.height-40);
+self.tableview.alpha = 1.0;
+
+[[self.tableview superview] addSubview:self.tableview];
+
+[UIView animateWithDuration:0.4 animations:^{
+NSLog(@"Started");
+self.tableview.alpha = 1.0;
+self.tableview.frame = CGRectMake(0, 40, self.view.frame.size.width, self.view.frame.size.height-500);
+
+} completion:^(BOOL finished) {
+NSLog(@"FINISHED");
+}];
+}
+
+-(void)viewDidAppear:(BOOL)animated {
+
+}
+
+-(void)longPressBegan: (UILongPressGestureRecognizer *)recognizer {
+
+if (recognizer.state == UIGestureRecognizerStateBegan) {
+
+[UIView animateWithDuration:0.11 delay:0.0 options:0 animations:^{
+
+self.topView.transform = CGAffineTransformMakeScale(1.1f, 1.1f);
+self.categoryIcon.transform = CGAffineTransformMakeScale(1.12f, 1.12f);
+self.categoryLabel.transform = CGAffineTransformMakeScale(1.07f, 1.07f);
+self.closeButton.transform = CGAffineTransformMakeScale(1.1f, 1.1f);
+
+} completion:^(BOOL finished) {
+
+//            self.topView.transform = CGAffineTransformMakeScale(1.20f, 1.20f);
+//            self.categoryIcon.transform = CGAffineTransformMakeScale(1.20f, 1.20f);
+//            self.categoryLabel.transform = CGAffineTransformMakeScale(1.20f, 1.20f);
+//            self.closeButton.transform = CGAffineTransformMakeScale(1.20f, 1.20f);
+
+}];
+}
+
+if (recognizer.state == UIGestureRecognizerStateEnded) {
+
+[self didCloseButtonTouch];
+}
+}
+
+-(void)queryForVenues:(NSString *)category {
+
+PFQuery *query = [PFQuery queryWithClassName:@"Venues"];
+[query whereKey:@"venueCategory" equalTo:category];
+[query orderByAscending:@"venueName"];
+[query findObjectsInBackgroundWithBlock:^(NSArray *objects, NSError *error) {
+
+if (error) {
+
+NSLog(@"Error: %@", error);
+}
+else {
+self.venues = objects;
+[self.tableview reloadData];
+NSLog(@"Objects: %lu", (unsigned long)objects.count);
+}
+
+if (objects.count == 0) {
+}
+}];
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+
+VenueTableCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell" forIndexPath:indexPath];
+
+if (self.venues.count == 0) {
+self.tableview.separatorStyle = UITableViewCellSeparatorStyleNone;
+}
+else {
+
+self.tableview.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
+}
+
+cell.bkgView.layer.cornerRadius = 6;
+
+if (_deployedCellIndex == indexPath.row) {
+cell.directionsButton.alpha = 1.0;
+cell.callButton.alpha = 1.0;
+cell.scrollView.alpha = 1.0;
+} else {
+cell.directionsButton.alpha = 0.0;
+cell.callButton.alpha = 0.0;
+cell.scrollView.alpha = 0.0;
+}
+
+PFObject *object = [self.venues objectAtIndex:indexPath.row];
+cell.venueName.text = [object objectForKey:@"name"];
+//cell.venueName.font = [UIFont fontWithName:@"AvenirNext-DemiBold" size:16.5];
+//cell.venueTeaser.font = [UIFont fontWithName:@"AvenirNext-DemiBold" size:12.5];
+//cell.venueTeaser.text = [object objectForKey:@"venueTeaser"];
+cell.venueTeaser.text = @".3 miles away";
+
+cell.venueBkg.layer.cornerRadius = 10;
+cell.venueBkg.clipsToBounds = YES;
+
+//cell.venueImage.layer.cornerRadius = cell.venueImage.frame.size.width/2;
+cell.venueImage.layer.cornerRadius = 8;
+cell.venueImage.clipsToBounds = YES;
+
+CLLocationDegrees lat = [[[[object objectForKey:@"location"] valueForKey:@"coordinate"] valueForKey:@"latitude"] doubleValue];
+CLLocationDegrees lon = [[[[object objectForKey:@"location"] valueForKey:@"coordinate"] valueForKey:@"longitude"] doubleValue];
+CLLocation *venueLocation = [[CLLocation alloc] initWithLatitude:lat longitude:lon];
+CLLocation *userLoca = [[CLLocation alloc] initWithLatitude:self.currentLocation.latitude longitude:self.currentLocation.longitude];
+
+CLLocationDistance distance = [userLoca distanceFromLocation:venueLocation];
+
+cell.venueTeaser.text = [NSString stringWithFormat:@"%.1fmi",(distance/1609.344)];
+
+
+if (self.imageArray.count == 0) {
+
+} else {
+
+if (self.imageArray.count-1 < indexPath.row) {
+
+} else {
+NSURL *url = [NSURL URLWithString:[self.imageArray objectAtIndex:indexPath.row]];
+[cell.venueImage sd_setImageWithURL:url placeholderImage:[UIImage imageNamed:@""]];
+}
+}
+
+return cell;
+}
+
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+
+VenueTableCell *cell = (VenueTableCell *)[self.tableview cellForRowAtIndexPath:indexPath];
+//_selectedIndex = (int)indexPath.row;
+
+if (_deployedCellIndex == indexPath.row) {
+
+_deployedCellIndex = -1;
+//_selectedIndex = -1;
+[UIView animateWithDuration:0.2 animations:^{
+NSIndexPath* indexPath = [NSIndexPath indexPathForRow:0 inSection:0];
+[self.tableview reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone];
+[self.tableview scrollToNearestSelectedRowAtScrollPosition:UITableViewScrollPositionMiddle animated:YES];
+}];
+} else {
+
+_deployedCellIndex = (int)indexPath.row;
+if (_deployedCellIndex == 0) {
+[UIView animateWithDuration:0.2 animations:^{
+NSIndexPath* indexPath = [NSIndexPath indexPathForRow:1 inSection:0];
+[self.tableview reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone];
+
+[self.tableview scrollToNearestSelectedRowAtScrollPosition:UITableViewScrollPositionMiddle animated:YES];
+}];
+
+} else {
+
+[UIView animateWithDuration:0.2 animations:^{
+
+NSIndexPath* indexPath = [NSIndexPath indexPathForRow:_previousDeployedCellIndex inSection:0];
+[self.tableview reloadRowsAtIndexPaths:[NSArray arrayWithObject:indexPath] withRowAnimation:UITableViewRowAnimationNone];
+
+[self.tableview scrollToNearestSelectedRowAtScrollPosition:UITableViewScrollPositionMiddle animated:YES];
+}];
+}
+[self setupImageScroller];
+}
+
+_previousDeployedCellIndex = _deployedCellIndex;
+
+if (_deployedCellIndex == indexPath.row) {
+[UIView animateWithDuration:0.14 delay:0.1 options:0 animations:^{
+cell.directionsButton.alpha = 1.0;
+cell.callButton.alpha = 1.0;
+cell.scrollView.alpha = 1.0;
+} completion:^(BOOL finished) {
+}];
+
+} else {
+[UIView animateWithDuration:0.1 delay:0 options:0 animations:^{
+cell.directionsButton.alpha = 0.0;
+cell.callButton.alpha = 0.0;
+cell.scrollView.alpha = 0.0;
+} completion:^(BOOL finished) {
+}];
+}
+}
+
+-(void)setupImageGallery {
+
+NSIndexPath *indexPath = [NSIndexPath indexPathForRow:_deployedCellIndex inSection:0];
+VenueTableCell *cell = (VenueTableCell *)[self.tableview cellForRowAtIndexPath:indexPath];
+NSURL *url = [NSURL URLWithString:[self.imageArray objectAtIndex:indexPath.row]];
+[cell.imageView sd_setImageWithURL:url placeholderImage:[UIImage imageNamed:@""]];
+}
+
+-(void)setupImageScroller {
+
+NSIndexPath *indexPath = [NSIndexPath indexPathForRow:_deployedCellIndex inSection:0];
+VenueTableCell *cell = (VenueTableCell *)[self.tableview cellForRowAtIndexPath:indexPath];
+
+_w = cell.scrollView.frame.size.width;
+_h = cell.scrollView.frame.size.height;
+
+cell.scrollView.contentSize = CGSizeMake(cell.scrollView.frame.size.width*4, cell.scrollView.frame.size.height);
+cell.scrollView.pagingEnabled = true;
+UIImage *image1 = [UIImage imageNamed:@"coffeePic.jpg"];
+UIImage *image2 = [UIImage imageNamed:@"coffeeIcon2"];
+
+cell.scrollView.layer.cornerRadius = 6;
+
+UIImageView *imageView = [[UIImageView alloc] initWithImage:image1];
+imageView.contentMode = UIViewContentModeScaleAspectFill;
+imageView.frame = cell.scrollView.bounds;
+UIImageView *imageView2 = [[UIImageView alloc] initWithImage:image2];
+imageView2.frame = CGRectMake(_w, 0, _w, _h);
+
+NSURL *url = [NSURL URLWithString:[self.imageArray objectAtIndex:indexPath.row]];
+NSString *imageUrl = [self.imageArray objectAtIndex:indexPath.row];
+NSString *finalString = [imageUrl stringByReplacingOccurrencesOfString:@"ms" withString:@"o"];
+NSURL *finalUrl = [NSURL URLWithString:finalString];
+[imageView sd_setImageWithURL:finalUrl placeholderImage:[UIImage imageNamed:@""]];
+
+[cell.scrollView addSubview:imageView];
+[cell.scrollView addSubview:imageView2];
+
+NSString *clientID = kCLIENTID;
+NSString *clientSecret = kCLIENTSECRET;
+
+NSDictionary *dic = [self.venues objectAtIndex:indexPath.row];
+
+NSString *venueName = cell.venueName.text;
+
+float lat = [[[[dic objectForKey:@"location"] valueForKey:@"coordinate"] valueForKey:@"latitude"] floatValue];
+float lon = [[[[dic objectForKey:@"location"] valueForKey:@"coordinate"] valueForKey:@"longitude"] floatValue];
+//    NSString *lat = [[[dic objectForKey:@"location"] valueForKey:@"coordinate"] valueForKey:@"latitude"];
+//    NSString *lon = [[[dic objectForKey:@"location"] valueForKey:@"coordinate"] valueForKey:@"longitude"];
+
+NSArray *duh = [[dic valueForKey:@"location"] valueForKey:@"address"];
+NSString *city = [[dic valueForKey:@"location"] valueForKey:@"city"];
+NSString *state = [[dic valueForKey:@"location"] valueForKey:@"state_code"];
+NSString *cityState = [NSString stringWithFormat:@"%@, %@", city, state];
+
+//NSLog(@"RIGHT HERE: %@", [duh objectAtIndex:0]);
+
+//NSString *url4 = [NSString stringWithFormat:@"https://api.foursquare.com/v2/venues/search?client_id=%@&client_secret=%@&v=20130815&ll=%@,%@&radius=100&limit=1&intent=browse", clientID, clientSecret, lat, lon];
+
+//NSString *url4 = [NSString stringWithFormat:@"https://api.foursquare.com/v2/venues/search?client_id=%@&client_secret=%@&v=20130815&limit=1&ll=%@,%@&query=%@&radius=100&intent=browse", clientID, clientSecret, lat, lon, self.categoryId];
+
+//NSLog(@"URL: %@", url4);
+
+//    NSURL *googleRequestURL1 =[NSURL URLWithString:url4];
+//
+//    dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//
+//        NSData* data = [NSData dataWithContentsOfURL: googleRequestURL1];
+//        [self performSelectorOnMainThread:@selector(fetchedVenue:) withObject:data waitUntilDone:YES];
+//    });
+
+//    NSString *someUrl = [NSString stringWithFormat:@"https://api.foursquare.com/v2/venues/%@/photos?client_id=%@&client_secret=%@&v=20130815&group=venue",@"dsfsdf", clientID, clientSecret];
+//
+//    NSURL *googleRequestURL=[NSURL URLWithString:someUrl];
+//
+//    dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//
+//        NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+//        [self performSelectorOnMainThread:@selector(fetchedImage:) withObject:data waitUntilDone:YES];
+//    });
+
+NSString *firstWordOfVenue = [[cell.venueName.text componentsSeparatedByString:@" "] objectAtIndex:0];
+NSLog(@"First Word: %@", firstWordOfVenue);
+NSLog(@"Lat: %f and Lon: %f", lat, lon);
+
+
+NSString *googleUrl = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=30&type=restaurant&keyword=%@&key=%@",lat, lon,firstWordOfVenue, kGOOGLE_API_KEY];
+
+NSURL *googleRequestURL=[NSURL URLWithString:googleUrl];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedVenue:) withObject:data waitUntilDone:YES];
+
+});
+}
+
+
+-(void)fetchedVenue: (NSData *)responseData {
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+NSArray *array = [json valueForKey:@"results"];
+//NSLog(@"Place Id: %@", [array valueForKey:@"id"]);
+
+if (array.count > 0) {
+
+NSArray *placeIdArray = [array valueForKey:@"place_id"];
+NSString *placeId = [placeIdArray objectAtIndex:0];
+NSLog(@"Place Id: %@", placeId);
+
+NSString *googleUrl = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/details/json?placeid=%@&key=%@",placeId, kGOOGLE_API_KEY];
+
+NSURL *googleRequestURL=[NSURL URLWithString:googleUrl];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedPhotos:) withObject:data waitUntilDone:YES];
+});
+} else {
+NSLog(@"Couldn't find a place :(");
+}
+
+
+//    NSString *status = [json valueForKey:@"status"];
+//    if ([status isEqualToString:@"OK"]) {
+//
+//        NSArray *firstArray = [[[json valueForKey:@"results"] valueForKey:@"photos"] valueForKey:@"photo_reference"];
+//        NSLog(@"here");
+//        if ([firstArray objectAtIndex:0] != nil) {
+//            NSArray *secondArray = [firstArray objectAtIndex:0];
+//            NSLog(@"here2");
+//            if ([secondArray objectAtIndex:0] != nil) {
+//                NSLog(@"here3");
+//                NSString *photoRef = [secondArray objectAtIndex:0];
+//
+//                //NSString *googleUrl = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photoreference=%@&key=%@&sensor=false",photoRef, kGOOGLE_API_KEY];
+//
+//                NSString *googleUrl = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/details/json?placeid=ChIJN1t_tDeuEmsRUsoyG83frY4&key=%@", kGOOGLE_API_KEY];
+//
+//
+//                NSURL *googleRequestURL=[NSURL URLWithString:googleUrl];
+//
+//                NSLog(@"URL: %@", googleRequestURL);
+//
+//
+//                dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+//
+//                    NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+//                    [self performSelectorOnMainThread:@selector(fetchedPhotos:) withObject:data waitUntilDone:YES];
+//                });
+//            }
+//        }
+//
+//    } else {
+//
+//    }
+}
+
+-(void)fetchedPhotos: (NSData *)responseData {
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+NSArray *results = [json valueForKey:@"result"];
+NSArray *photos = [results valueForKey:@"photos"];
+NSArray *photoRefs = [photos valueForKey:@"photo_reference"];
+
+NSLog(@"Photo Count: %lu", (unsigned long)photoRefs.count);
+
+}
+
+-(void)fetchedImage: (NSData *)responseData {
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+NSMutableArray *array = [[NSMutableArray alloc] init];
+array = [[[json objectForKey:@"response"] objectForKey:@"photos"] valueForKey:@"items"];
+
+if (array.count>0) {
+NSString *prefix = [[array valueForKey:@"prefix"] objectAtIndex:0];
+NSString *suffix = [[array valueForKey:@"suffix"] objectAtIndex:0];
+NSString *imageUrl = [NSString stringWithFormat:@"%@600x600%@", prefix, suffix];
+NSURL *url = [NSURL URLWithString:imageUrl];
+
+} else {
+return;
+}
+
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath {
+
+if (_deployedCellIndex == indexPath.row) {
+return 350;
+}
+
+return 98;
+}
+
+-(void)viewWillDisappear:(BOOL)animated {
+
+[[UIApplication sharedApplication] setStatusBarStyle:UIStatusBarStyleDefault animated:YES];
+
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+
+return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+
+
+return self.venues.count;
+}
+
+
+-(UIColor*)colorWithHexString:(NSString*)hex {
+
+NSString *cString = [[hex stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]] uppercaseString];
+
+// String should be 6 or 8 characters
+if ([cString length] < 6) return [UIColor grayColor];
+
+// strip 0X if it appears
+if ([cString hasPrefix:@"0X"]) cString = [cString substringFromIndex:2];
+
+if ([cString length] != 6) return  [UIColor grayColor];
+
+// Separate into r, g, b substrings
+NSRange range;
+range.location = 0;
+range.length = 2;
+NSString *rString = [cString substringWithRange:range];
+
+range.location = 2;
+NSString *gString = [cString substringWithRange:range];
+
+range.location = 4;
+NSString *bString = [cString substringWithRange:range];
+
+// Scan values
+unsigned int r, g, b;
+[[NSScanner scannerWithString:rString] scanHexInt:&r];
+[[NSScanner scannerWithString:gString] scanHexInt:&g];
+[[NSScanner scannerWithString:bString] scanHexInt:&b];
+
+return [UIColor colorWithRed:((float) r / 255.0f)
+green:((float) g / 255.0f)
+blue:((float) b / 255.0f)
+alpha:1.0f];
+}
+
+
+
+- (void)createCloseButton
+{
+
+self.closeButton = [[UIButton alloc] initWithFrame:CGRectMake(CGRectGetWidth(self.view.frame)-60, 19.0, 50, 50)];
+
+[self.closeButton setImage:[UIImage imageNamed:@"cancelMay"] forState:UIControlStateNormal];
+[self.closeButton addTarget:self action:@selector(didCloseButtonTouch) forControlEvents:UIControlEventTouchUpInside];
+[self.closeButton addGestureRecognizer:self.longPress];
+[self.view addSubview:self.closeButton];
+}
+
+- (void)didCloseButtonTouch
+{
+[self dismissViewControllerAnimated:YES completion:nil];
+}
+
+//// Empty Table View Properties
+
+- (NSAttributedString *)titleForEmptyDataSet:(UIScrollView *)scrollView {
+
+//NSString *text = self.category;
+NSString *text = @"";
+NSDictionary *attributes = @{NSFontAttributeName: [UIFont fontWithName:@"AvenirNext-Regular" size:28],
+NSForegroundColorAttributeName: [UIColor colorWithWhite:1.0 alpha:0.9]};
+return [[NSAttributedString alloc] initWithString:text attributes:attributes];
+}
+
+- (BOOL)emptyDataSetShouldDisplay:(UIScrollView *)scrollView {
+
+if (self.venues.count == 0) {
+self.tableview.separatorStyle = UITableViewCellSeparatorStyleNone;
+
+return YES;
+}
+return NO;
+}
+
+//- (CGPoint)offsetForEmptyDataSet:(UIScrollView *)scrollView {
+//    return CGPointZero;
+//}
+
+- (BOOL)emptyDataSetShouldAllowScroll:(UIScrollView *)scrollView {
+return NO;
+}
+
+-(void)queryUsingYelpYuck {
+
+NSString *term = @"food";
+NSString *location = self.userCity;
+NSString *category = self.categoryId;
+
+self.imageArray = [[NSMutableArray alloc] init];
+
+NSString *userLocation = [NSString stringWithFormat:@"%f,%f", self.currentLocation.latitude, self.currentLocation.longitude];
+
+self.venues = [[NSMutableArray alloc] init];
+
+YPAPISample *APISample = [[YPAPISample alloc] init];
+[APISample queryVenues:term location:location coordinates:userLocation category:category completionHandler:^(NSMutableArray *venues, NSError *error) {
+if (error) {
+} else {
+self.venues = venues;
+
+for (int i = 0; i < self.venues.count; i++) {
+NSDictionary *dic = [self.venues objectAtIndex:i];
+NSString *imageUrl = [dic valueForKey:@"image_url"];
+if (imageUrl != nil) {
+//NSLog(@"IMAGEURL: %@", imageUrl);
+//NSString *string = [imageUrl stringByReplacingOccurrencesOfString:@"ms" withString:@"o"];
+[self.imageArray addObject:imageUrl];
+}
+}
+dispatch_async(dispatch_get_main_queue(), ^{
+// code here
+[self.tableview reloadData];
+});
+}
+}];
+}
+
+-(void) queryForDasVenues {
+
+NSString *clientID = kCLIENTID;
+NSString *clientSecret = kCLIENTSECRET;
+
+NSString *url = [NSString stringWithFormat:@"https://api.foursquare.com/v2/venues/search?client_id=%@&client_secret=%@&v=20130815&ll=%f,%f&radius=2000&limit=10&categoryId=%@", clientID, clientSecret, self.currentLocation.latitude, self.currentLocation.longitude, self.categoryId];
+
+
+NSURL *googleRequestURL=[NSURL URLWithString:url];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedData:) withObject:data waitUntilDone:YES];
+});
+}
+
+-(void)fetchedData:(NSData *)responseData {
+
+NSString *clientID = kCLIENTID;
+NSString *clientSecret = kCLIENTSECRET;
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+self.venues = [[NSMutableArray alloc] init];
+self.venues = [[json objectForKey:@"response"] objectForKey:@"venues"];
+
+NSLog(@"Here: %lu", (unsigned long)self.venues.count);
+NSDictionary *tempVen = [self.venues objectAtIndex:0];
+NSLog(@"Hi: %@", [tempVen valueForKey:@"id"]);
+
+NSString *url = [NSString stringWithFormat:@"https://api.foursquare.com/v2/venues/%@/photos?client_id=%@&client_secret=%@&v=20130815&group=venue",[tempVen valueForKey:@"id"], clientID, clientSecret];
+
+NSURL *googleRequestURL=[NSURL URLWithString:url];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedImage:) withObject:data waitUntilDone:YES];
+});
+
+[self.tableview reloadData];
+
+}
+
+//-(void)fetchedImage: (NSData *)responseData {
+//
+//    NSError* error;
+//    NSDictionary* json = [NSJSONSerialization
+//                          JSONObjectWithData:responseData
+//
+//                          options:kNilOptions
+//                          error:&error];
+//
+//    NSMutableArray *array = [[NSMutableArray alloc] init];
+//    array = [[[json objectForKey:@"response"] objectForKey:@"photos"] valueForKey:@"items"];
+//
+//    self.imageArray = [[NSMutableArray alloc] init];
+//
+//    for (int i = 0; i < array.count; i++) {
+//
+//            NSString *prefix = [[array valueForKey:@"prefix"] objectAtIndex:i];
+//            NSString *suffix = [[array valueForKey:@"suffix"] objectAtIndex:i];
+//            NSString *imageUrl = [NSString stringWithFormat:@"%@100x100%@", prefix, suffix];
+//            NSLog(@"Pic: %@", imageUrl);
+//            //NSLog(@"Nil prefix: %@", prefix);
+//
+//            [self.imageArray addObject:imageUrl];
+//
+//    }
+//    [self.tableview reloadData];
+//}
+
+-(void)queryForGooglePlaceVenues {
+
+NSString *googleUrl = [NSString stringWithFormat:@"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%f,%f&radius=10000&type=restaurant&key=%@",self.currentLocation.latitude, self.currentLocation.longitude, kGOOGLE_API_KEY];
+
+NSURL *googleRequestURL=[NSURL URLWithString:googleUrl];
+
+dispatch_async(dispatch_get_global_queue( DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+
+NSData* data = [NSData dataWithContentsOfURL: googleRequestURL];
+[self performSelectorOnMainThread:@selector(fetchedPlaces:) withObject:data waitUntilDone:YES];
+});
+}
+
+-(void)fetchedPlaces: (NSData *)responseData {
+
+NSError* error;
+NSDictionary* json = [NSJSONSerialization
+JSONObjectWithData:responseData
+
+options:kNilOptions
+error:&error];
+
+NSArray *array = [json valueForKey:@"results"];
+NSLog(@"Places: %@", json);
+
+}
+
+@end

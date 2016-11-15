@@ -1,0 +1,30 @@
+//
+//  prefix.pch
+//  Bite
+//
+//  Created by Evan Latner on 7/11/15.
+//  Copyright (c) 2015 Bite. All rights reserved.
+//
+
+#ifndef Bite_prefix_pch
+#define Bite_prefix_pch
+
+
+
+#define colorCombination1 [UIColor colorWithRed:.... alpha:1.0];
+#define colorCombination2 [UIColor colorWithRed:.... alpha:1.0];
+#define colorCombination3 [UIColor colorWithRed:.... alpha:1.0];
+#define colorCombination4 [UIColor colorWithRed:.... alpha:1.0];
+#define colorCombination5 [UIColor colorWithRed:.... alpha:1.0];
+#define colorCombination6 [UIColor colorWithRed:.... alpha:1.0];
+#define colorCombination7 [UIColor colorWithRed:.... alpha:1.0];
+#define colorCombination8 [UIColor colorWithRed:.... alpha:1.0];
+
+
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+
+#endif
+
+
